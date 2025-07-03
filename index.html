@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8" />
+  <title>Snake Game with Start Button</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(to bottom right, #1d1f21, #2c3e50);
+      height: 100vh;
+      font-family: sans-serif;
+      overflow: hidden;
+      position: relative;
+    }
+
+    #game-container {
+      position: relative;
+      width: 400px;
+      height: 400px;
+      background-color: #333;
+      border: 4px solid #fff;
+      background-image:
+        linear-gradient(#444 1px, transparent 1px),
+        linear-gradient(90deg, #444 1px, transparent 1px);
+      background-size: 20px 20px;
+      user-select: none;
+    }
+
+    .snake-part, .food {
+      width: 20px;
+      height: 20px;
+      position: absolute;
+      transition: transform 0.15s linear;
+    }
+
+    .snake-part {
+      background: linear-gradient(145deg, #4a90e2, #2980b9);
+      border-radius: 6px;
+      box-shadow: inset 0 0 5px rgba(0,0,0,0.4);
+    }
+
+    .snake-head {
+      background: radial-gradient(circle at center, #0f3a72, #0a2462);
+      border-radius: 50%;
+      box-shadow:
+        inset 0 0 8px rgba(0, 0, 0, 0.7),
+        0 2px 6px rgba(0, 0, 0, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* Eyes container */
+    .snake-head .eyes {
+      position: relative;
+      width: 14px;
+      height: 14px;
+    }
+
+    /* Eyes */
+    .eye {
+      position: absolute;
+      width: 5px;
+      height: 5px;
+      background: white;
+      border-radius: 50%;
+      top: 4px;
+      box-shadow: inset 0 0 2px #000;
+      transition: all 0.2s ease;
+    }
+
+    .eye.left {
+      left: 0;
+    }
+
+    .eye.right {
+      right: 0;
+    }
+
+    /* Pupils */
+    .pupil {
+      width: 2px;
+      height: 2px;
+      background: black;
+      border-radius: 50%;
+      position: absolute;
+      top: 1.5px;
+      left: 1.5px;
+      transition: all 0.2s ease;
+    }
+
+    /* Tongue */
+    .tongue {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: #d43f3f;
+      border-radius: 50% 50% 0 0;
+      top: 17px;
+      left: 8px;
+      clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+      animation: flicker 0.8s infinite;
+      transform-origin: top center;
+      transition: all 0.2s ease;
+    }
+
+    /* Flicker animation */
+    @keyframes flicker {
+      0%, 100% { transform: rotate(0deg); }
+      50% { transform: rotate(15deg); }
+    }
+
+    /* Food style */
+    .food {
+      background-color: #ff2d55;
+      border-radius: 50%;
+    }
+
+    .food::before {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 7px;
+      width: 6px;
+      height: 4px;
+      background-color: #00ff00;
+      border-radius: 2px;
+    }
+
+    #score {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      color: #fff;
+      font-size: 20px;
+      z-index: 2;
+    }
+
+    /* Start button styles */
+    #start-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 400px;
+      height: 400px;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+      user-select: none;
+    }
+
+    #start-button {
+      padding: 15px 40px;
+      font-size: 24px;
+      font-weight: bold;
+      border: none;
+      border-radius: 10px;
+      background: #3498db;
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 0 15px #3498dbaa;
+      transition: background 0.3s ease;
+    }
+
+    #start-button:hover {
+      background: #2980b9;
+    }
+  </style>
+</head>
+<body>
+  <div id="score">Score: 0</div>
+  <div id="game-container">
+    <div id="start-overlay">
+      <button id="start-button">Start Game</button>
+    </div>
+  </div>
+
+  <script>
+    const container = document.getElementById('game-container');
+    const scoreDisplay = document.getElementById('score');
+    const startOverlay = document.getElementById('start-overlay');
+    const startButton = document.getElementById('start-button');
+
+    const gridSize = 20;
+    const tileSize = 20;
+
+    let snake = [{ x: 10, y: 10 }];
+    let direction = { x: 0, y: 0 };
+    let food = { x: 5, y: 5 };
+    let score = 0;
+    let parts = [];
+    let foodElement;
+
+    // Speeds in ms
+    const normalSpeed = 350;
+    const boostSpeed = 150;
+    let currentSpeed = normalSpeed;
+    let gameInterval;
+    let gameStarted = false;
+
+    function createSegment(className = 'snake-part') {
+      const part = document.createElement('div');
+      part.classList.add(className);
+
+      if (className === 'snake-head') {
+        // Add eyes and tongue
+        const eyes = document.createElement('div');
+        eyes.classList.add('eyes');
+
+        const leftEye = document.createElement('div');
+        leftEye.classList.add('eye', 'left');
+        const leftPupil = document.createElement('div');
+        leftPupil.classList.add('pupil');
+        leftEye.appendChild(leftPupil);
+
+        const rightEye = document.createElement('div');
+        rightEye.classList.add('eye', 'right');
+        const rightPupil = document.createElement('div');
+        rightPupil.classList.add('pupil');
+        rightEye.appendChild(rightPupil);
+
+        eyes.appendChild(leftEye);
+        eyes.appendChild(rightEye);
+        part.appendChild(eyes);
+
+        const tongue = document.createElement('div');
+        tongue.classList.add('tongue');
+        part.appendChild(tongue);
+      }
+
+      container.appendChild(part);
+      return part;
+    }
+
+    function placeFood() {
+      if (foodElement) container.removeChild(foodElement);
+      do {
+        food.x = Math.floor(Math.random() * gridSize);
+        food.y = Math.floor(Math.random() * gridSize);
+      } while (snake.some(s => s.x === food.x && s.y === food.y));
+
+      foodElement = document.createElement('div');
+      foodElement.classList.add('food');
+      container.appendChild(foodElement);
+      setPosition(foodElement, food);
+    }
+
+    function setPosition(el, pos) {
+      el.style.transform = `translate(${pos.x * tileSize}px, ${pos.y * tileSize}px)`;
+    }
+
+    function updateEyesDirection(headEl, dir) {
+      const pupils = headEl.querySelectorAll('.pupil');
+      let xOffset = 0;
+      let yOffset = 0;
+      const offsetAmount = 1.5;
+
+      if (dir.x === 1) xOffset = offsetAmount;
+      else if (dir.x === -1) xOffset = -offsetAmount;
+      if (dir.y === 1) yOffset = offsetAmount;
+      else if (dir.y === -1) yOffset = -offsetAmount;
+
+      pupils.forEach(pupil => {
+        pupil.style.transform = `translate(${xOffset}px, ${yOffset}px)`;
+      });
+    }
+
+    function updateTongueDirection(headEl, dir) {
+      const tongue = headEl.querySelector('.tongue');
+      if (!tongue) return;
+
+      let angle = 0;
+      if (dir.x === 1) angle = 90;
+      else if (dir.x === -1) angle = -90;
+      else if (dir.y === 1) angle = 180;
+      else angle = 0;
+
+      tongue.style.transform = `rotate(${angle}deg)`;
+    }
+
+    function drawSnake() {
+      while (parts.length < snake.length) {
+        const isHead = parts.length === 0;
+        const part = createSegment(isHead ? 'snake-head' : 'snake-part');
+        parts.push(part);
+      }
+
+      parts.forEach((part, i) => {
+        part.className = 'snake-part';
+        if (i === 0) part.classList.add('snake-head');
+        else if (i === snake.length - 1) part.classList.add('snake-tail');
+        setPosition(part, snake[i]);
+
+        if (i === 0) {
+          updateEyesDirection(part, direction);
+          updateTongueDirection(part, direction);
+        }
+      });
+    }
+
+    function moveSnake() {
+      if (!gameStarted) return;
+      if (direction.x === 0 && direction.y === 0) return;
+
+      const newHead = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
+
+      // Wall or self collision
+      if (
+        newHead.x < 0 || newHead.y < 0 ||
+        newHead.x >= gridSize || newHead.y >= gridSize ||
+        snake.some(s => s.x === newHead.x && s.y === newHead.y)
+      ) {
+        alert('Game Over! Score: ' + score);
+        location.reload();
+        return;
+      }
+
+      snake.unshift(newHead);
+
+      // Eat food
+      if (newHead.x === food.x && newHead.y === food.y) {
+        score++;
+        scoreDisplay.textContent = 'Score: ' + score;
+        placeFood();
+        activateSpeedBoost();
+      } else {
+        snake.pop();
+      }
+
+      drawSnake();
+    }
+
+    function resetGameInterval() {
+      if (gameInterval) clearInterval(gameInterval);
+      parts.forEach(part => {
+        part.style.transitionDuration = (currentSpeed * 0.9) + 'ms';
+      });
+      gameInterval = setInterval(moveSnake, currentSpeed);
+    }
+
+    function activateSpeedBoost() {
+      currentSpeed = boostSpeed;
+      resetGameInterval();
+      setTimeout(() => {
+        currentSpeed = normalSpeed;
+        resetGameInterval();
+      }, 2000);
+    }
+
+    startButton.addEventListener('click', () => {
+      gameStarted = true;
+      startOverlay.style.display = 'none';
+      direction = { x: 1, y: 0 }; // start moving right immediately
+      resetGameInterval();
+    });
+
+    // Prevent movement before game start
+    window.addEventListener('keydown', e => {
+      if (!gameStarted) return;
+
+      switch (e.key) {
+        case 'ArrowUp':
+          if (direction.y === 0) direction = { x: 0, y: -1 };
+          break;
+        case 'ArrowDown':
+          if (direction.y === 0) direction = { x: 0, y: 1 };
+          break;
+        case 'ArrowLeft':
+          if (direction.x === 0) direction = { x: -1, y: 0 };
+          break;
+        case 'ArrowRight':
+          if (direction.x === 0) direction = { x: 1, y: 0 };
+          break;
+      }
+    });
+
+    placeFood();
+    drawSnake();
+    // No interval until start button clicked
+  </script>
+</body>
+</html>
