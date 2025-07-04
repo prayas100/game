@@ -1,133 +1,68 @@
+
 <!DOCTYPE html>
-<html lang="en" >
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Snake Game with Custom Game Over and Victory Screens</title>
+  <title>Snake Game - Endless Mode</title>
   <style>
     * {
-      box-sizing: border-box;
       margin: 0;
       padding: 0;
+      box-sizing: border-box;
     }
 
     body {
       display: flex;
       justify-content: center;
       align-items: center;
-      background: linear-gradient(to bottom right, #1d1f21, #2c3e50);
       height: 100vh;
-      font-family: sans-serif;
-      overflow: hidden;
-      position: relative;
+      background: linear-gradient(-45deg, #1e3c72, #2a5298, #1e3c72, #1e2b4a);
+      background-size: 400% 400%;
+      animation: gradientShift 12s ease infinite;
+      font-family: Arial, sans-serif;
       color: white;
     }
 
-    #game-container {
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    #game {
       position: relative;
       width: 400px;
       height: 400px;
-      background-color: #333;
-      border: 4px solid #fff;
-      background-image:
-        linear-gradient(#444 1px, transparent 1px),
-        linear-gradient(90deg, #444 1px, transparent 1px);
-      background-size: 20px 20px;
-      user-select: none;
-      z-index: 1;
+      background-color: #222;
+      display: grid;
+      grid-template-columns: repeat(20, 20px);
+      grid-template-rows: repeat(20, 20px);
+      gap: 1px;
     }
 
-    .snake-part, .food {
+    .tile {
       width: 20px;
       height: 20px;
-      position: absolute;
-      transition: transform 0.15s linear;
+      background-color: #333;
     }
 
-    .snake-part {
-      background: linear-gradient(145deg, #4a90e2, #2980b9);
-      border-radius: 6px;
-      box-shadow: inset 0 0 5px rgba(0,0,0,0.4);
-    }
-
-    .snake-head {
-      background: radial-gradient(circle at center, #0f3a72, #0a2462);
-      border-radius: 50%;
-      box-shadow:
-        inset 0 0 8px rgba(0, 0, 0, 0.7),
-        0 2px 6px rgba(0, 0, 0, 0.8);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .snake-head .eyes {
-      position: relative;
-      width: 14px;
-      height: 14px;
-    }
-
-    .eye {
-      position: absolute;
-      width: 5px;
-      height: 5px;
-      background: white;
-      border-radius: 50%;
-      top: 4px;
-      box-shadow: inset 0 0 2px #000;
-      transition: all 0.2s ease;
-    }
-
-    .eye.left {
-      left: 0;
-    }
-
-    .eye.right {
-      right: 0;
-    }
-
-    .pupil {
-      width: 2px;
-      height: 2px;
-      background: black;
-      border-radius: 50%;
-      position: absolute;
-      top: 1.5px;
-      left: 1.5px;
-      transition: all 0.2s ease;
-    }
-
-    .tongue {
-      position: absolute;
-      width: 4px;
-      height: 4px;
-      background: #d43f3f;
-      border-radius: 50% 50% 0 0;
-      top: 17px;
-      left: 8px;
-      clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
-      animation: flicker 0.8s infinite;
-      transform-origin: top center;
-      transition: all 0.2s ease;
-    }
-
-    @keyframes flicker {
-      0%, 100% { transform: rotate(0deg); }
-      50% { transform: rotate(15deg); }
+    .snake {
+      background-color: #4aa3df;
     }
 
     .food {
-      background-color: #ff2d55;
-      border-radius: 50%;
+      background-color: red;
+      position: relative;
     }
 
     .food::before {
-      content: "";
+      content: '';
       position: absolute;
       top: 2px;
       left: 7px;
       width: 6px;
       height: 4px;
-      background-color: #00ff00;
+      background-color: green;
       border-radius: 2px;
     }
 
@@ -135,426 +70,83 @@
       position: absolute;
       top: 20px;
       left: 20px;
-      font-size: 20px;
-      z-index: 2;
-    }
-
-    #timer {
-      position: absolute;
-      top: 50px;
-      left: 20px;
       font-size: 18px;
-      z-index: 2;
-      color: #eee;
     }
-
-    #start-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 400px;
-      height: 400px;
-      background: rgba(0, 0, 0, 0.8);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 10;
-      user-select: none;
-    }
-
-    #start-button {
-      padding: 15px 40px;
-      font-size: 24px;
-      font-weight: bold;
-      border: none;
-      border-radius: 10px;
-      background: #3498db;
-      color: white;
-      cursor: pointer;
-      box-shadow: 0 0 15px #3498dbaa;
-      transition: background 0.3s ease;
-    }
-
-    #start-button:hover {
-      background: #2980b9;
-    }
-
-    /* Overlay styles for Victory and Game Over */
-    .overlay {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100vw; height: 100vh;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 9999;
-      user-select: none;
-      text-align: center;
-      padding: 20px;
-      font-size: 36px;
-      font-weight: bold;
-      color: white;
-    }
-
-    #victory-overlay {
-      background: radial-gradient(circle, #ffecb3, #f2a365);
-      color: #4a2c00;
-    }
-
-    #gameover-overlay {
-      background: radial-gradient(circle, #7f0000, #b22222);
-      color: #ffcccc;
-    }
-
-    /* Dancing cat animation */
-    #dancing-cat {
-      font-size: 100px;
-      animation: dance 1s infinite alternate ease-in-out;
-      margin-top: 20px;
-    }
-
-    @keyframes dance {
-      0% { transform: translateY(0) rotate(0deg); }
-      50% { transform: translateY(-20px) rotate(10deg); }
-      100% { transform: translateY(0) rotate(0deg); }
-    }
-
-    /* Buttons on overlays */
-    .overlay-button {
-      margin-top: 30px;
-      font-size: 24px;
-      padding: 12px 30px;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      box-shadow: 0 0 12px #00000088;
-      transition: background 0.3s ease;
-    }
-
-    #try-again-button {
-      background: #27ae60;
-      color: white;
-    }
-
-    #try-again-button:hover {
-      background: #1e8449;
-    }
-
-    #gameover-try-again-button {
-      background: #c0392b;
-      color: white;
-    }
-
-    #gameover-try-again-button:hover {
-      background: #922b21;
-    }
-
   </style>
 </head>
 <body>
   <div id="score">Score: 0</div>
-  <div id="timer">Time since last apple: 0s</div>
-  <div id="game-container">
-    <div id="start-overlay">
-      <button id="start-button">Start Game</button>
-    </div>
-  </div>
-
-  <div id="victory-overlay" class="overlay" style="display:none;">
-    <div>GOOD JOB!<br>YOU FINISHED AND YOU'RE THE FIRST IN HISTORY!</div>
-    <div id="dancing-cat">🐱💃</div>
-    <button id="try-again-button" class="overlay-button">Try Again</button>
-  </div>
-
-  <div id="gameover-overlay" class="overlay" style="display:none;">
-    <div>GAME OVER!<br>Better luck next time.</div>
-    <button id="gameover-try-again-button" class="overlay-button">Try Again</button>
-  </div>
+  <div id="game"></div>
 
   <script>
-    const container = document.getElementById('game-container');
-    const scoreDisplay = document.getElementById('score');
-    const timerDisplay = document.getElementById('timer');
-    const startOverlay = document.getElementById('start-overlay');
-    const startButton = document.getElementById('start-button');
-    const victoryOverlay = document.getElementById('victory-overlay');
-    const tryAgainButton = document.getElementById('try-again-button');
-    const gameoverOverlay = document.getElementById('gameover-overlay');
-    const gameoverTryAgainButton = document.getElementById('gameover-try-again-button');
-
+    const game = document.getElementById("game");
+    const scoreEl = document.getElementById("score");
     const gridSize = 20;
-    const tileSize = 20;
-
-    let snake = [{ x: 10, y: 10 }];
-    let direction = { x: 0, y: 0 };
-    let food = { x: 5, y: 5 };
+    const tiles = [];
+    const snake = [{ x: 10, y: 10 }];
+    let direction = { x: 1, y: 0 };
+    let food = [];
     let score = 0;
-    let parts = [];
-    let foodElement;
 
-    // Speeds in ms
-    const normalSpeed = 350;
-    const boostSpeed = 150;
-    let currentSpeed = normalSpeed;
-    let gameInterval;
-    let gameStarted = false;
-
-    // For win condition timing
-    let lastAppleTime = null;
-    let applesEatenInRow = 0;
-    const timeLimitSeconds = 15;
-    const applesNeeded = 5;
-
-    const maxApples = 20; // Regular game ending apples needed
-
-    // Timer interval
-    let timerInterval;
-
-    function createSegment(className = 'snake-part') {
-      const part = document.createElement('div');
-      part.classList.add(className);
-
-      if (className === 'snake-head') {
-        // Add eyes and tongue
-        const eyes = document.createElement('div');
-        eyes.classList.add('eyes');
-
-        const leftEye = document.createElement('div');
-        leftEye.classList.add('eye', 'left');
-        const leftPupil = document.createElement('div');
-        leftPupil.classList.add('pupil');
-        leftEye.appendChild(leftPupil);
-
-        const rightEye = document.createElement('div');
-        rightEye.classList.add('eye', 'right');
-        const rightPupil = document.createElement('div');
-        rightPupil.classList.add('pupil');
-        rightEye.appendChild(rightPupil);
-
-        eyes.appendChild(leftEye);
-        eyes.appendChild(rightEye);
-        part.appendChild(eyes);
-
-        const tongue = document.createElement('div');
-        tongue.classList.add('tongue');
-        part.appendChild(tongue);
+    // Create grid and populate all with apples
+    for (let y = 0; y < gridSize; y++) {
+      for (let x = 0; x < gridSize; x++) {
+        const tile = document.createElement("div");
+        tile.classList.add("tile", "food");
+        game.appendChild(tile);
+        tiles.push(tile);
+        food.push({ x, y });
       }
-
-      container.appendChild(part);
-      return part;
     }
 
-    function placeFood() {
-      if (foodElement) container.removeChild(foodElement);
-      do {
-        food.x = Math.floor(Math.random() * gridSize);
-        food.y = Math.floor(Math.random() * gridSize);
-      } while (snake.some(s => s.x === food.x && s.y === food.y));
-
-      foodElement = document.createElement('div');
-      foodElement.classList.add('food');
-      container.appendChild(foodElement);
-      setPosition(foodElement, food);
+    function getIndex(x, y) {
+      return y * gridSize + x;
     }
 
-    function setPosition(el, pos) {
-      el.style.transform = `translate(${pos.x * tileSize}px, ${pos.y * tileSize}px)`;
-    }
+    function draw() {
+      tiles.forEach(t => {
+        t.className = "tile";
+      });
 
-    function updateEyesDirection(headEl, dir) {
-      const pupils = headEl.querySelectorAll('.pupil');
-      let xOffset = 0;
-      let yOffset = 0;
-      const offsetAmount = 1.5;
+      food.forEach(f => {
+        tiles[getIndex(f.x, f.y)].classList.add("food");
+      });
 
-      if (dir.x === 1) xOffset = offsetAmount;
-      else if (dir.x === -1) xOffset = -offsetAmount;
-      if (dir.y === 1) yOffset = offsetAmount;
-      else if (dir.y === -1) yOffset = -offsetAmount;
-
-      pupils.forEach(pupil => {
-        pupil.style.transform = `translate(${xOffset}px, ${yOffset}px)`;
+      snake.forEach((s, i) => {
+        tiles[getIndex(s.x, s.y)].classList.add("snake");
       });
     }
 
-    function updateTongueDirection(headEl, dir) {
-      const tongue = headEl.querySelector('.tongue');
-      if (!tongue) return;
+    function move() {
+      const head = { x: (snake[0].x + direction.x + gridSize) % gridSize, y: (snake[0].y + direction.y + gridSize) % gridSize };
+      snake.unshift(head);
 
-      let angle = 0;
-      if (dir.x === 1) angle = 90;
-      else if (dir.x === -1) angle = -90;
-      else if (dir.y === 1) angle = 180;
-      else angle = 0;
-
-      tongue.style.transform = `rotate(${angle}deg)`;
-    }
-
-    function drawSnake() {
-      while (parts.length < snake.length) {
-        const isHead = parts.length === 0;
-        const part = createSegment(isHead ? 'snake-head' : 'snake-part');
-        parts.push(part);
-      }
-
-      parts.forEach((part, i) => {
-        part.className = 'snake-part';
-        if (i === 0) part.classList.add('snake-head');
-        else if (i === snake.length - 1) part.classList.add('snake-tail');
-        setPosition(part, snake[i]);
-
-        if (i === 0) {
-          updateEyesDirection(part, direction);
-          updateTongueDirection(part, direction);
-        }
-      });
-    }
-
-    function showGameOver() {
-      gameoverOverlay.style.display = 'flex';
-    }
-
-    function endGame(message, isWin = false) {
-      gameStarted = false;
-      clearInterval(gameInterval);
-      clearInterval(timerInterval);
-
-      if (isWin) {
-        victoryOverlay.style.display = 'flex';
-      } else {
-        showGameOver();
-      }
-    }
-
-    function moveSnake() {
-      if (!gameStarted) return;
-      if (direction.x === 0 && direction.y === 0) return;
-
-      const newHead = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
-
-      // Wall or self collision
-      if (
-        newHead.x < 0 || newHead.y < 0 ||
-        newHead.x >= gridSize || newHead.y >= gridSize ||
-        snake.some(s => s.x === newHead.x && s.y === newHead.y)
-      ) {
-        endGame('Game Over! You hit a wall or yourself. Score: ' + score);
-        return;
-      }
-
-      snake.unshift(newHead);
-
-      // Eat food
-      if (newHead.x === food.x && newHead.y === food.y) {
+      // Check for apple
+      const index = food.findIndex(f => f.x === head.x && f.y === head.y);
+      if (index !== -1) {
+        food.splice(index, 1);
         score++;
-        scoreDisplay.textContent = 'Score: ' + score;
-
-        // Handle timing for apples in a row
-        const now = Date.now();
-
-        if (lastAppleTime === null || (now - lastAppleTime) / 1000 <= timeLimitSeconds) {
-          applesEatenInRow++;
-        } else {
-          // Too slow, reset streak
-          applesEatenInRow = 1;
-        }
-        lastAppleTime = now;
-
-        placeFood();
-        activateSpeedBoost();
-
-        if (applesEatenInRow >= applesNeeded) {
-          endGame('You win! You ate 5 apples in under 15 seconds!', true);
-          return;
-        }
-
-        if (score >= maxApples) {
-          endGame('Game Over! You reached 20 apples.');
-          return;
-        }
-
+        scoreEl.textContent = `Score: ${score}`;
       } else {
         snake.pop();
       }
 
-      drawSnake();
+      draw();
     }
 
-    function resetGameInterval() {
-      if (gameInterval) clearInterval(gameInterval);
-      parts.forEach(part => {
-        part.style.transitionDuration = (currentSpeed * 0.9) + 'ms';
-      });
-      gameInterval = setInterval(moveSnake, currentSpeed);
-    }
+    setInterval(move, 500);
 
-    function activateSpeedBoost() {
-      currentSpeed = boostSpeed;
-      resetGameInterval();
-      setTimeout(() => {
-        currentSpeed = normalSpeed;
-        resetGameInterval();
-      }, 2000);
-    }
-
-    function startTimer() {
-      timerDisplay.textContent = `Time since last apple: 0s`;
-
-      timerInterval = setInterval(() => {
-        if (!lastAppleTime) return;
-        const elapsed = Math.floor((Date.now() - lastAppleTime) / 1000);
-        timerDisplay.textContent = `Time since last apple: ${elapsed}s`;
-
-        // If time goes past 15s, reset apples in a row streak
-        if (elapsed > timeLimitSeconds) {
-          applesEatenInRow = 0;
-          lastAppleTime = null;
-          timerDisplay.textContent = `Time since last apple: 0s`;
-        }
-      }, 500);
-    }
-
-    startButton.addEventListener('click', () => {
-      gameStarted = true;
-      startOverlay.style.display = 'none';
-      direction = { x: 1, y: 0 };
-      resetGameInterval();
-
-      lastAppleTime = Date.now();
-      applesEatenInRow = 0;
-      startTimer();
-    });
-
-    tryAgainButton.addEventListener('click', () => {
-      location.reload();
-    });
-
-    gameoverTryAgainButton.addEventListener('click', () => {
-      location.reload();
-    });
-
-    window.addEventListener('keydown', e => {
-      if (!gameStarted) return;
-
+    window.addEventListener("keydown", e => {
       switch (e.key) {
-        case 'ArrowUp':
-          if (direction.y === 0) direction = { x: 0, y: -1 };
-          break;
-        case 'ArrowDown':
-          if (direction.y === 0) direction = { x: 0, y: 1 };
-          break;
-        case 'ArrowLeft':
-          if (direction.x === 0) direction = { x: -1, y: 0 };
-          break;
-        case 'ArrowRight':
-          if (direction.x === 0) direction = { x: 1, y: 0 };
-          break;
+        case "ArrowUp": if (direction.y === 0) direction = { x: 0, y: -1 }; break;
+        case "ArrowDown": if (direction.y === 0) direction = { x: 0, y: 1 }; break;
+        case "ArrowLeft": if (direction.x === 0) direction = { x: -1, y: 0 }; break;
+        case "ArrowRight": if (direction.x === 0) direction = { x: 1, y: 0 }; break;
       }
     });
 
-    placeFood();
-    drawSnake();
+    draw();
   </script>
 </body>
 </html>
+
